@@ -116,31 +116,36 @@ end
 
 hook.Add("LanguageChanged", "Language Extensions:Update Phrases", function( old, new )
 
-    if (phrases[ new ] != nil) then
-        for placeholder, fulltext in pairs( phrases[ new ] ) do
-            add( placeholder, fulltext )
-        end
+    if ( phrases[ new ] == nil ) then
+        return
+    end
+
+    for placeholder, fulltext in pairs( phrases[ new ] ) do
+        add( placeholder, fulltext )
     end
 
 end)
 
 function language.Remove( placeholder, lang )
 
-    local langNow = language.Get()
-    if type( lang ) != "string" then
-
-        phrases[ langNow ][ placeholder ] = nil
-        language.Add( placeholder, placeholder )
-
-    else
+    if ( type( lang ) == "string" ) then
 
         if ( phrases[ lang ] != nil ) then
             phrases[ lang ][ placeholder ] = nil
         end
 
-        if ( lang == langNow ) then
+        if ( lang == language.Get() ) then
             language.Add( placeholder, placeholder )
         end
+
+    else
+
+        local langNow = language.Get()
+        if ( phrases[ langNow ] != nil ) then
+            phrases[ langNow ][ placeholder ] = nil
+        end
+
+        language.Add( placeholder, placeholder )
 
     end
 
