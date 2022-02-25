@@ -47,14 +47,15 @@ if SERVER then
         end
 
         cvars.AddChangeCallback("sv_language", function( name, old, new )
-            print( "call", name, old, new, serverLanguage )
+            if ( hook_Run( "LanguageChanged", old, new ) == true ) then
+                return
+            end
+
             if ( new == "" ) then
                 RunConsoleCommand( "sv_language", defaultLang )
             else
                 serverLanguage = new
             end
-
-            hook_Run( "LanguageChanged", old, new )
         end, "Language Extensions:sv_language")
     end
 
@@ -76,13 +77,15 @@ else
         end
 
         cvars.AddChangeCallback("gmod_language", function( name, old, new )
+            if ( hook_Run( "LanguageChanged", old, new ) == true ) then
+                return
+            end
+
             if ( new == "" ) then
                 RunConsoleCommand( "gmod_language", defaultLang )
             else
                 serverLanguage = new
             end
-
-            hook_Run( "LanguageChanged", old, new )
         end, "Language Extensions:gmod_language")
     end
 
