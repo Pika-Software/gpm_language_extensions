@@ -25,7 +25,7 @@ do
     end
 end
 
-local defaultLang = "gb"
+local defaultLang = CreateConVar( "default_language", "gb", FCVAR_ARCHIVE, " - Default language of Garry's mod" ):GetString()
 local defaultFlag = "materials/flags16/" .. defaultLang .. ".png"
 
 function language.GetFlag( lang )

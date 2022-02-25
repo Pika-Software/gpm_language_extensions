@@ -28,5 +28,6 @@
 
 ## Convars:
 
-### `sv_language` (def. `"gb"`) - Changes language of Garry's mod on server
-### `gmod_language` (def. `"gb"`) - Changes language of Garry's mod on client
+### `default_language` (def. `"gb"`) - Default language of Garry's mod.
+### `sv_language` (def. `default_language`) - Changes language of Garry's mod on server.
+### `gmod_language` (def. `default_language`) - Changes language of Garry's mod on client.
