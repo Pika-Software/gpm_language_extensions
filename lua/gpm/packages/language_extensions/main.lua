@@ -102,6 +102,7 @@ function language.Add( placeholder, fulltext, lang )
     assert( type( placeholder ) == "string", "bad argument #1 (string expected)" )
     assert( type( fulltext ) == "string", "bad argument #2 (string expected)" )
 
+    lang = type( lang ) == "string" and lang or language.Get()
     if (phrases[ lang ] == nil) then
         phrases[ lang ] = {}
     end
