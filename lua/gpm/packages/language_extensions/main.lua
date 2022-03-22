@@ -96,6 +96,9 @@ else
 end
 
 local phrases = {}
+function language.GetStored()
+    return phrases
+end
 
 local add = environment.saveFunc( "language.Add", language.Add )
 function language.Add( placeholder, fulltext, lang )
@@ -110,7 +113,7 @@ function language.Add( placeholder, fulltext, lang )
     phrases[ lang ][ placeholder ] = fulltext
 
     local langNow = language.Get()
-    if ( langNow == lang ) or ( phrases[ langNow ][ placeholder ] == nil ) then
+    if (langNow == lang) or ( (phrases[ langNow ] != nil) and (phrases[ langNow ][ placeholder ] == nil) ) then
         add( placeholder, fulltext )
     end
 end
