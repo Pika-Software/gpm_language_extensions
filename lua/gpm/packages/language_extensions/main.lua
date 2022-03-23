@@ -1,7 +1,7 @@
 local assert = assert
 local type = type
 
-if SERVER then
+if (SERVER) then
     module( "language", package.seeall )
 
     local phrases = {}
@@ -19,21 +19,25 @@ end
 
 do
     local file_Exists = file.Exists
-    function language.Exists( lang )
-        assert( type( lang ) == "string", "bad argument #1 (string expected)" )
-        return file_Exists( "materials/flags16/" .. lang .. ".png", "GAME" )
+    function language.GetFlag( lang )
+        lang = type( lang ) == "string" and lang or language.Get()
+
+        if file_Exists( "resource/localization/" .. lang .. ".png", "GAME" ) then
+            return "resource/localization/" .. lang .. ".png"
+        end
+
+        if file_Exists( "materials/flags16/" .. lang .. ".png", "GAME" ) then
+            return "materials/flags16/" .. lang .. ".png"
+        end
+
+        return "materials/flags16/gb.png"
     end
 end
 
-local defaultLang = CreateConVar( "default_language", "gb", FCVAR_ARCHIVE, " - Default language of Garry's mod" ):GetString()
-local defaultFlag = "materials/flags16/" .. defaultLang .. ".png"
+local defaultLang = CreateConVar( "default_language", "en", FCVAR_ARCHIVE, " - Default language of Garry's mod" ):GetString()
+local defaultFlag = language.GetFlag( defaultLang )
 
-function language.GetFlag( lang )
-    lang = type( lang ) == "string" and lang or language.Get()
-    return language.Exists( lang ) and "materials/flags16/" .. lang .. ".png" or defaultFlag
-end
-
-if SERVER then
+if (SERVER) then
 
     local serverLanguage = CreateConVar( "sv_language", defaultLang, FCVAR_ARCHIVE, " - Changes language of Garry's mod" ):GetString()
 
@@ -95,10 +99,19 @@ else
 
 end
 
-local phrases = {}
+local phrases = {["en"] = {}}
 function language.GetStored()
     return phrases
 end
+
+local startup_language = language.Get()
+if (phrases[ startup_language ] == nil) then
+    phrases[ startup_language ] = {}
+end
+
+game_ready.run( function()
+    hook.Run( "LanguageChanged", "en", startup_language )
+end )
 
 local add = environment.saveFunc( "language.Add", language.Add )
 function language.Add( placeholder, fulltext, lang )
@@ -113,28 +126,170 @@ function language.Add( placeholder, fulltext, lang )
     phrases[ lang ][ placeholder ] = fulltext
 
     local langNow = language.Get()
-    if (langNow == lang) or ( (phrases[ langNow ] != nil) and (phrases[ langNow ][ placeholder ] == nil) ) then
+    if (langNow == lang) or (phrases[ langNow ][ placeholder ] == nil) then
         add( placeholder, fulltext )
     end
 end
 
-hook.Add("LanguageChanged", "Language Extensions:Update Phrases", function( old, new )
-
-    if ( phrases[ new ] == nil ) then
-        return
+local get = environment.saveFunc( "language.GetPhrase", language.GetPhrase )
+function language.GetPhrase( placeholder, lang )
+    local langPhrases = phrases[ type( lang ) == "string" and lang or language.Get() ]
+    if (langPhrases ~= nil) then
+        local phrase = langPhrases[ placeholder ]
+        if (phrase ~= nil) then
+            return phrase
+        end
     end
 
-    for placeholder, fulltext in pairs( phrases[ new ] ) do
-        add( placeholder, fulltext )
-    end
+    return get( placeholder )
+end
 
-end)
+function language.HasPhrase( placeholder )
+    return get( placeholder ) ~= placeholder
+end
+
+do
+
+    local scripted_ents_GetStored = scripted_ents.GetStored
+    local weapons_GetStored = weapons.GetStored
+    local ents_FindByClass = ents.FindByClass
+    local list_Set = list.Set
+    local list_Get = list.Get
+    local tostring = tostring
+    local ipairs = ipairs
+    local pairs = pairs
+
+    -- Spawnmenu Support
+    local spawnmenuTabs = {
+        "SpawnableEntities",
+        "Vehicles",
+        "Weapon",
+        "NPC"
+    }
+
+    hook.Add("LanguageChanged", "Language Extensions:Update Phrases", function( old, new )
+
+        if ( phrases[ new ] == nil ) then
+            return
+        end
+
+        -- Update all phrases in game
+        for placeholder, fulltext in pairs( phrases[ new ] ) do
+            add( placeholder, fulltext )
+
+            local isCategory = placeholder:StartWith("spawnmenu.")
+            local categoryName = placeholder:sub( 11, #placeholder ):lower()
+            for num, tabName in ipairs( spawnmenuTabs ) do
+                for class, tbl in pairs( list_Get( tabName ) ) do
+                    if type( tbl ) == "table" then
+                        if not isCategory then
+                            if (class == placeholder) then
+
+                                -- Weapons
+                                if (tabName == spawnmenuTabs[3]) then
+                                    local SWEP = weapons_GetStored( placeholder )
+                                    if (SWEP ~= nil) then
+                                        SWEP.PrintName = "#" .. placeholder
+                                    end
+
+                                    for num, ent in ipairs( ents_FindByClass( placeholder ) ) do
+                                        local printName = ent:GetPrintName()
+                                        if (printName) then
+                                            local tranlatedName = get( printName )
+                                            if (phrases["en"][ placeholder ] == nil) and (tranlatedName ~= printName) then
+                                                phrases["en"][ placeholder ] = tranlatedName
+                                            end
+
+                                            if (tranlatedName ~= fulltext) then
+                                                add( printName, fulltext )
+                                            end
+                                        else
+                                            ent.PrintName = "#" .. placeholder
+                                        end
+                                    end
+
+                                    if (phrases["en"][ placeholder ] == nil) then
+                                        phrases["en"][ placeholder ] = get( tbl.PrintName )
+                                    end
+                                end
+
+                                -- Entites
+                                if (tabName == spawnmenuTabs[1]) then
+                                    if (phrases["en"][ placeholder ] == nil) then
+                                        phrases["en"][ placeholder ] = tbl.PrintName or fulltext
+                                    end
+
+                                    local ENT = scripted_ents_GetStored( placeholder )
+                                    if (ENT ~= nil) then
+                                        ENT.PrintName = "#" .. placeholder
+                                    end
+
+                                    for num, ent in ipairs( ents_FindByClass( placeholder ) ) do
+                                        ent.PrintName = "#" .. placeholder
+                                    end
+                                end
+
+                                local key = "PrintName"
+                                if (tabName == spawnmenuTabs[4]) or (tabName == spawnmenuTabs[2]) then
+                                    key = "Name"
+                                end
+
+                                if (tbl[key] ~= nil) then
+                                    if (phrases["en"][ placeholder ] == nil) then
+                                        phrases["en"][ placeholder ] = tbl[ key ]
+                                    end
+
+                                    tbl[ key ] = "#" .. placeholder
+                                end
+                            end
+                        elseif (tbl.Category:lower() == categoryName) then
+                            if (phrases["en"][ placeholder ] == nil) then
+                                phrases["en"][ placeholder ] = tbl.Category or "Other"
+                            end
+
+                            tbl.Category = "#" .. placeholder
+                        end
+
+                        list_Set( tabName, class, tbl )
+                    end
+                end
+            end
+
+            if (SERVER) and placeholder:StartWith( "game_text." ) then
+                for num, ent in ipairs( ents_FindByClass( "game_text" ) ) do
+                    if (ent.__message == nil) then
+                        ent.__message = tostring( ent:GetKeyValues().message )
+                    end
+
+                    local message = ent.__message:Replace( "#", "" )
+                    if (message == placeholder) then
+                        if (phrases["en"][ placeholder ] == nil) then
+                            phrases["en"][ placeholder ] = ent.__message
+                        end
+
+                        ent:SetKeyValue( "message", fulltext )
+                    end
+                end
+            end
+        end
+
+        if (CLIENT) then
+            timer.Simple(0, function()
+                if GAMEMODE.IsSandboxDerived then
+                    RunConsoleCommand("spawnmenu_reload")
+                end
+            end)
+        end
+
+    end)
+
+end
 
 function language.Remove( placeholder, lang )
 
     if ( type( lang ) == "string" ) then
 
-        if ( phrases[ lang ] != nil ) then
+        if ( phrases[ lang ] ~= nil ) then
             phrases[ lang ][ placeholder ] = nil
         end
 
@@ -145,7 +300,7 @@ function language.Remove( placeholder, lang )
     else
 
         local langNow = language.Get()
-        if ( phrases[ langNow ] != nil ) then
+        if ( phrases[ langNow ] ~= nil ) then
             phrases[ langNow ][ placeholder ] = nil
         end
 
@@ -154,3 +309,32 @@ function language.Remove( placeholder, lang )
     end
 
 end
+
+do
+    local pattern = "[^%s]+"
+    function language.Translate( fulltext, symbol )
+        local hasSymbol = (symbol ~= nil)
+        for placeholder in fulltext:gmatch( pattern ) do
+            if (hasSymbol) then
+                if not placeholder:StartWith( symbol ) or (placeholder == symbol) then
+                    continue
+                end
+
+                fulltext = fulltext:Replace( placeholder, get( placeholder:sub( #symbol + 1, #placeholder ) ) )
+                continue
+            end
+
+            fulltext = fulltext:Replace( placeholder, get( placeholder ) )
+        end
+
+        return fulltext
+    end
+end
+
+-- Garry's Mod weapons corrections
+language.Add( "weapon_physgun", "PHYSICS GUN", "en" )
+language.Add( "manhack_welder", "Manhack Gun", "en" )
+language.Add( "weapon_medkit", "Medkit", "en" )
+language.Add( "gmod_camera", "Camera", "en" )
+language.Add( "weapon_fists", "Fists", "en" )
+language.Add( "gmod_tool", "Tool Gun", "en" )
