@@ -242,7 +242,7 @@ do
                                     tbl[ key ] = "#" .. placeholder
                                 end
                             end
-                        elseif (tbl.Category:lower() == categoryName) then
+                        elseif type(tbl.Category) == "string" and (tbl.Category:lower() == categoryName) then
                             if (phrases["en"][ placeholder ] == nil) then
                                 phrases["en"][ placeholder ] = tbl.Category or "Other"
                             end
