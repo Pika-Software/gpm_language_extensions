@@ -116,7 +116,9 @@ end )
 local add = environment.saveFunc( "language.Add", language.Add )
 function language.Add( placeholder, fulltext, lang )
     assert( type( placeholder ) == "string", "bad argument #1 (string expected)" )
-    assert( type( fulltext ) == "string", "bad argument #2 (string expected)" )
+    if type( fulltext ) ~= "string" then
+        fulltext = placeholder
+    end
 
     lang = type( lang ) == "string" and lang or language.Get()
     if (phrases[ lang ] == nil) then
@@ -242,7 +244,7 @@ do
                                     tbl[ key ] = "#" .. placeholder
                                 end
                             end
-                        elseif (tbl.Category:lower() == categoryName) then
+                        elseif type(tbl.Category) == "string" and (tbl.Category:lower() == categoryName) then
                             if (phrases["en"][ placeholder ] == nil) then
                                 phrases["en"][ placeholder ] = tbl.Category or "Other"
                             end
