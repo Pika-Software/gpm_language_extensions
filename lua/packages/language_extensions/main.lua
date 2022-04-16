@@ -37,6 +37,28 @@ end
 local defaultLang = CreateConVar( "default_language", "en", FCVAR_ARCHIVE, " - Default language of Garry's mod" ):GetString()
 local defaultFlag = language.GetFlag( defaultLang )
 
+do
+
+    local countryNames = {}
+    game_ready.wait( http.Fetch, "https://raw.githubusercontent.com/fannarsh/country-list/master/data.json", function( body, size, headers, code )
+        if (code == 200) then
+            local tbl = util.JSONToTable( body )
+            if (tbl) then
+
+                for num, data in ipairs( tbl ) do
+                    countryNames[ data.code:lower() ] = data.name
+                end
+
+            end
+        end
+    end)
+
+    function language.GetCountry( lang )
+        return countryNames[ lang ] or lang
+    end
+
+end
+
 if (SERVER) then
 
     local serverLanguage = CreateConVar( "sv_language", defaultLang, FCVAR_ARCHIVE, " - Changes language of Garry's mod" ):GetString()
@@ -109,7 +131,7 @@ if (phrases[ startup_language ] == nil) then
     phrases[ startup_language ] = {}
 end
 
-game_ready.run( function()
+game_ready.wait( function()
     hook.Run( "LanguageChanged", "en", startup_language )
 end )
 
@@ -244,12 +266,12 @@ do
                                     tbl[ key ] = "#" .. placeholder
                                 end
                             end
-                        elseif type(tbl.Category) == "string" and (tbl.Category:lower() == categoryName) then
-                            if (phrases["en"][ placeholder ] == nil) then
-                                phrases["en"][ placeholder ] = tbl.Category or "Other"
-                            end
+                        -- elseif type(tbl.Category) == "string" and (tbl.Category:lower() == categoryName) then
+                        --     if (phrases["en"][ placeholder ] == nil) then
+                        --         phrases["en"][ placeholder ] = tbl.Category or "Other"
+                        --     end
 
-                            tbl.Category = "#" .. placeholder
+                        --     tbl.Category = "#" .. placeholder
                         end
 
                         list_Set( tabName, class, tbl )
